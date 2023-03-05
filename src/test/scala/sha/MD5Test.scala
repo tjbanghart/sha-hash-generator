@@ -23,15 +23,25 @@ class MD5Test extends AnyFreeSpec with ChiselScalatestTester {
     "h" + str.toList.map(_.toInt.toHexString).mkString
   }
 
-  val md5 = MessageDigest.getInstance("MD5")
+  val javaMd5 = MessageDigest.getInstance("MD5")
 
   "compute the correct hash value for a simple message" in {
-    test(new MD5(testString.getBytes.length)) { c =>
-      val expected = byteArrayToString(md5.digest(testString.getBytes("ASCII")))
-      println(stringToHex(testString).U(512.W))
-      c.io.dataIn.poke(stringToHex(testString).U(512.W))
-      c.clock.step(1)
-      c.io.hashOut.expect(expected.U(128.W)) // Expected hash value in hex
+    val messageLength = testString.getBytes.length * 8
+    test(new Md5(MDParams.MD5, testString.getBytes.length * 8)) { c =>
+      val expected = byteArrayToString(javaMd5.digest(testString.getBytes("ASCII")))
+      c.io.in.bits.message.poke(stringToHex(testString).U(512.W))
+      c.io.in.valid.poke(true)
+      // TODO: try to send message length as io from UInt
+      // c.io.in.bits.messageLength.poke(testString.getBytes.length * 8)
+      // Allow load cycle to complete
+      c.clock.step((MDParams.MD5.blockSize / messageLength) + 1)
+      c.io.in.valid.poke(false.B)
+      c.io.in.ready.expect(false.B)
+      c.io.out.valid.expect(false.B)
+      // Allow hash algorithm to complete
+      c.clock.step(MDParams.MD5.rounds + 1)
+      c.io.out.valid.expect(true.B)
+      c.io.out.bits.expect(expected.U(128.W)) // Expected hash value in hex
     }
   }
 }
