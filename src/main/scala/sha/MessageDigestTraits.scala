@@ -6,11 +6,8 @@ import chisel3._
  * Contract of a Message Digest algorithm.
  */
 trait MessageDigestTraits extends Module {
-  val messageLength: Int
-
   /** Apply padding if necessary */
   def pad(): Unit
-
 
   /** Chunk data */
   def chunk(): Unit

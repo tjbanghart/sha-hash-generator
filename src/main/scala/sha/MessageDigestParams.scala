@@ -20,7 +20,7 @@ case class MessageDigestParams(
   internalStateVariables: Int, // number of variables used during hash algorithm
   blockSize: Int,
   wordSize: Int = 32, // size in bits of word to operate on
-  rounds: Int
+  rounds: Int,
 )
 
 object MDParams extends Enumeration {
