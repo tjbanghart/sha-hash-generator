@@ -6,36 +6,12 @@ import chisel3._
 import chisel3.util._
 
 /**
- * The MD5 hash generator.
- *
- * Abstracts internal state machine and hash implementation
- */
-class Md5(p: MessageDigestParams, val messageLength: Int) extends Module {
-  val io = IO(new MessageDigestIO(p))
-  val md5 = Module(new Md5Impl(p, messageLength))
-  val state = Module(new StateModule(md5, p))
-  io.in.ready := state.io.ready
-  io.out.bits := md5.io.hashOut
-  io.out.valid := state.io.valid
-
-  state.io.fire := io.in.fire
-
-  md5.state <> state.sIo
-  md5.io.messageIn := io.in.bits.message
-}
-
-/**
  * Compute MD5 hash given 512b input message.
  *
  * Reference: https://en.wikipedia.org/wiki/MD5#Algorithm
  */
-protected class Md5Impl(p: MessageDigestParams, val messageLength: Int) extends Module with MessageDigestTraits {
-  val io = IO(new Bundle {
-    val messageIn = Input(UInt(messageLength.W))
-    val hashOut = Output(UInt(p.outputWidth.W))
-  })
-  val state = IO(Input(new StateIO))
-
+class Md5(p: MessageDigestParams, messageLength: Int) extends MessageDigest(p, messageLength) {
+  io.out.bits := DontCare
   // T represents integer part of the sines of integers (Radians) as constants:
   val T = VecInit.tabulate(63)(i => math.floor(4294967296L * math.abs(math.sin(i + 1))).toLong.U)
 
@@ -58,39 +34,24 @@ protected class Md5Impl(p: MessageDigestParams, val messageLength: Int) extends 
   val d = RegInit("h10325476".U(32.W))
 
   val f = Wire(UInt(32.W))
-  f := DontCare
   val g = Wire(UInt(32.W))
+  f := DontCare
   g := DontCare
 
   val M = Wire(Vec(16, UInt(32.W)))
-  M := DontCare
   val block = Wire(UInt(512.W))
+  M := DontCare
   block := DontCare
 
-  io.hashOut := DontCare
-
-  // Regrettable switch - it would be better if could
-  // call helper methods from each implementation in
-  // StateModule directly.
-  switch (state.state) {
-    is(State.sLoad) {
-      pad()
-      chunk()
-    }
-    is (State.sHash) {
-      hash()
-    }
-    is (State.sOutput) {
-      output()
-    }
-  }
+  // Ensures the FSM is initialized
+  super.stateInit()
 
   /** Apply padding if necessary */
   override def pad(): Unit = {
     // TODO: Make this accept messages longer than 512b
     // Pad the input following the spec:
     //  Append "1" to end of message
-    val onePad = Cat(io.messageIn((messageLength) - 1, 0), 1.U)
+    val onePad = Cat(io.in.bits.message((messageLength) - 1, 0), 1.U)
     //  Pad 0 until 448 bit
     val fill = 448 - (messageLength - 1)
     val padded = Cat(onePad, Fill(fill, 0.U))
@@ -99,6 +60,7 @@ protected class Md5Impl(p: MessageDigestParams, val messageLength: Int) extends 
   }
 
   override def chunk(): Unit = {
+    // TODO: Make this accept messages longer than 512b
     for (i <- 0 until 16) {
       M(i) := block(32 * (i + 1) - 1, 32 * i)
     }
@@ -108,8 +70,7 @@ protected class Md5Impl(p: MessageDigestParams, val messageLength: Int) extends 
   override def hash(): Unit = {
     val notB = ~b
     val notD = ~d
-    val i = state.word.index
-    printf(cf"I: ${Cat(a0, b0, c0, d0)}%x\n")
+    val i = wordIndex
     when(i < 16.U) {
       f := ((b & c) | (notB.asUInt & d))
       g := i
@@ -129,7 +90,7 @@ protected class Md5Impl(p: MessageDigestParams, val messageLength: Int) extends 
     c := b
     b := temp
 
-    when(state.word.wrap) {
+    when(wordWrap) {
       a0 := a0 +& a
       b0 := b0 +& b
       c0 := c0 +& c
@@ -140,6 +101,6 @@ protected class Md5Impl(p: MessageDigestParams, val messageLength: Int) extends 
   /** Wire hash state to output */
   override def output(): Unit = {
     // Concatenate the four state variables to produce the final hash
-    io.hashOut := Cat(a0, b0, c0, d0)
+    io.out.bits := Cat(a0, b0, c0, d0)
   }
 }

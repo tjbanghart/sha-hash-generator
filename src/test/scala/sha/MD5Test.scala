@@ -31,15 +31,14 @@ class MD5Test extends AnyFreeSpec with ChiselScalatestTester {
       val expected = byteArrayToString(javaMd5.digest(testString.getBytes("ASCII")))
       c.io.in.bits.message.poke(stringToHex(testString).U(512.W))
       c.io.in.valid.poke(true)
-      // TODO: try to send message length as io from UInt
-      // c.io.in.bits.messageLength.poke(testString.getBytes.length * 8)
       // Allow load cycle to complete
       c.clock.step((MDParams.MD5.blockSize / messageLength) + 1)
       c.io.in.valid.poke(false.B)
       c.io.in.ready.expect(false.B)
       c.io.out.valid.expect(false.B)
-      // Allow hash algorithm to complete
-      c.clock.step(MDParams.MD5.rounds + 1)
+      // The simple test case is less than 512b so it should be completed
+      // after a single cycle of rounds.
+      c.clock.step(MDParams.MD5.rounds)
       c.io.out.valid.expect(true.B)
       c.io.out.bits.expect(expected.U(128.W)) // Expected hash value in hex
     }
