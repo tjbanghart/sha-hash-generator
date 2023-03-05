@@ -9,11 +9,11 @@ object State {
 }
 
 /**
- * Generic state machine for handling MessageDigest classes
+ * Base class for MessageDigest classes
  *
  * Contains base FSM and counters for hashing rounds based on provided {@link MessageDigestParams}
  */
-class MessageDigest(p: MessageDigestParams, messageLength: Int) extends Module with MessageDigestTraits {
+abstract class MessageDigest(p: MessageDigestParams, messageLength: Int) extends Module with MessageDigestTraits {
   val io = IO(new MessageDigestIO(p))
   val state = RegInit(State.sIdle)
 
@@ -48,25 +48,5 @@ class MessageDigest(p: MessageDigestParams, messageLength: Int) extends Module w
         state := State.sIdle
       }
     }
-  }
-
-   /* Apply padding if necessary */
-  override def pad(): Unit = {
-     throw new UnsupportedOperationException("Subclass must implement")
-  }
-
-  /* Chunk data */
-  override def chunk(): Unit = {
-    throw new UnsupportedOperationException("Subclass must implement")
-  }
-
-  /* Main hashing logic */
-  override def hash(): Unit = {
-    throw new UnsupportedOperationException("Subclass must implement")
-  }
-
-  /* Wire hash state to output */
-  override def output(): Unit = {
-    throw new UnsupportedOperationException("Subclass must implement")
   }
 }

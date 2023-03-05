@@ -14,7 +14,6 @@ class MessageDigestIO(p: MessageDigestParams) extends Bundle {
   val out = Valid(UInt(p.outputWidth.W))
 }
 
-
 case class MessageDigestParams(
   outputWidth: Int,
   internalStateVariables: Int, // number of variables used during hash algorithm
@@ -23,7 +22,7 @@ case class MessageDigestParams(
   rounds: Int,
 )
 
-object MDParams extends Enumeration {
+object MessageDigestParamsEnum extends Enumeration {
   type MessageDigestEnum = Value
   val MD5 = MessageDigestParams(
     outputWidth = 128,

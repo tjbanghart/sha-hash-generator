@@ -10,7 +10,7 @@ import chisel3.util._
  *
  * Reference: https://en.wikipedia.org/wiki/MD5#Algorithm
  */
-class Md5(p: MessageDigestParams, messageLength: Int) extends MessageDigest(p, messageLength) {
+class Md5(p: MessageDigestParams, messageLength: Int) extends MessageDigest(p, messageLength) with MessageDigestTraits {
   io.out.bits := DontCare
   // T represents integer part of the sines of integers (Radians) as constants:
   val T = VecInit.tabulate(63)(i => math.floor(4294967296L * math.abs(math.sin(i + 1))).toLong.U)
@@ -33,13 +33,8 @@ class Md5(p: MessageDigestParams, messageLength: Int) extends MessageDigest(p, m
   val c = RegInit("h98badcfe".U(32.W))
   val d = RegInit("h10325476".U(32.W))
 
-  val f = Wire(UInt(32.W))
-  val g = Wire(UInt(32.W))
-  f := DontCare
-  g := DontCare
-
   val M = Wire(Vec(16, UInt(32.W)))
-  val block = Wire(UInt(512.W))
+  val block = Wire(UInt(p.blockSize.W))
   M := DontCare
   block := DontCare
 
@@ -68,6 +63,8 @@ class Md5(p: MessageDigestParams, messageLength: Int) extends MessageDigest(p, m
 
   /** Main hashing logic */
   override def hash(): Unit = {
+    val f = Wire(UInt(32.W))
+    val g = Wire(UInt(32.W))
     val notB = ~b
     val notD = ~d
     val i = wordIndex
@@ -98,7 +95,7 @@ class Md5(p: MessageDigestParams, messageLength: Int) extends MessageDigest(p, m
     }
   }
 
-  /** Wire hash state to output */
+//  /** Wire hash state to output */
   override def output(): Unit = {
     // Concatenate the four state variables to produce the final hash
     io.out.bits := Cat(a0, b0, c0, d0)
