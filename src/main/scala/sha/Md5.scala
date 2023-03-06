@@ -14,7 +14,7 @@ class Md5(p: MessageDigestParams, messageLength: Int)
     with MessageDigestTraits {
   io.out.bits := DontCare
   // T represents integer part of the sines of integers (Radians) as constants:
-  val T = VecInit.tabulate(63)(i =>
+  val T = VecInit.tabulate(64)(i =>
     math.floor(4294967296L * math.abs(math.sin(i + 1))).toLong.U
   )
 
@@ -27,21 +27,24 @@ class Md5(p: MessageDigestParams, messageLength: Int)
   )
 
   // Define the base state variables
-  val a0 = RegInit("h67452301".U(32.W))
-  val b0 = RegInit("hefcdab89".U(32.W))
-  val c0 = RegInit("h98badcfe".U(32.W))
-  val d0 = RegInit("h10325476".U(32.W))
+  val a0 = RegInit("h01234567".U(32.W))
+  val b0 = RegInit("h89abcdef".U(32.W))
+  val c0 = RegInit("hfedcba98".U(32.W))
+  val d0 = RegInit("h76543210".U(32.W))
 
   // Define the internal state variables
-  val a = RegInit("h67452301".U(32.W))
-  val b = RegInit("hefcdab89".U(32.W))
-  val c = RegInit("h98badcfe".U(32.W))
-  val d = RegInit("h10325476".U(32.W))
+  val a = RegInit("h01234567".U(32.W))
+  val b = RegInit("h89abcdef".U(32.W))
+  val c = RegInit("hfedcba98".U(32.W))
+  val d = RegInit("h76543210".U(32.W))
 
   val M = Reg(Vec(16, UInt(32.W)))
   val block = Reg(UInt(p.blockSize.W))
 //  M := DontCare
 //  block := DontCare
+  val message = Reg(UInt(512.W))
+  message := io.in.bits.message
+//  io.in.bits.messageLength := messageLength.U
 
   // Ensures the FSM is initialized
   super.stateInit()
