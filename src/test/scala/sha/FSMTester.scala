@@ -50,14 +50,14 @@ class FSMTester extends AnyFreeSpec with ChiselScalatestTester {
       c.io.in.valid.poke(false)
       c.currentState.s.expect(State.sLoad)
       // Allow load cycle to complete
-      c.clock.step(len / params.blockSize)
+      c.clock.step(len / params.blockSize + 1)
       c.currentState.s.expect(State.sHash)
       c.io.in.valid.poke(false.B)
       c.io.in.ready.expect(false.B)
       c.io.out.valid.expect(false.B)
-      for (i <- 0 until len / params.blockSize) {
+      for (i <- 0 until len / params.blockSize + 1) {
         c.currentState.countChunk.expect(i)
-        for (j <- 0 until params.rounds) {
+        for (j <- 0 until params.rounds + 1) {
           c.currentState.countWord.expect(j)
           c.clock.step(1)
         }

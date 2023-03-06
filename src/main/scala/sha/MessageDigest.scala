@@ -19,9 +19,9 @@ abstract class MessageDigest(p: MessageDigestParams, messageLength: Int)
   val io = IO(new MessageDigestIO(p))
   val state = RegInit(State.sIdle)
 
-  val (wordIndex, wordWrap) = Counter(state === State.sHash, p.rounds)
+  val (wordIndex, wordWrap) = Counter(state === State.sHash, p.rounds + 1)
   val (chunkIndex, chunkWrap) =
-    Counter(state === State.sLoad || wordWrap, messageLength / p.blockSize)
+    Counter(state === State.sLoad || wordWrap, messageLength / p.blockSize + 1)
 
   io.in.ready := state === State.sIdle
   io.out.valid := state === State.sIdle | state === State.sOutput

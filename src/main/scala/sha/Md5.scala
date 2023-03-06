@@ -12,9 +12,10 @@ import chisel3.util._
 class Md5(p: MessageDigestParams, messageLength: Int)
     extends MessageDigest(p, messageLength)
     with MessageDigestTraits {
+  def ByteWire(): Vec[UInt] = Vec(p.wordSize / 8, UInt(8.W))
   io.out.bits := DontCare
   // T represents integer part of the sines of integers (Radians) as constants:
-  val T = VecInit.tabulate(63)(i =>
+  val T = VecInit.tabulate(64)(i =>
     math.floor(4294967296L * math.abs(math.sin(i + 1))).toLong.U
   )
 
@@ -38,13 +39,23 @@ class Md5(p: MessageDigestParams, messageLength: Int)
   val c = RegInit("h98badcfe".U(32.W))
   val d = RegInit("h10325476".U(32.W))
 
-  val M = Reg(Vec(16, UInt(32.W)))
-  val block = Reg(UInt(p.blockSize.W))
-//  M := DontCare
-//  block := DontCare
+  val M = Wire(Vec(16, UInt(32.W)))
+  val block = Wire(UInt(p.blockSize.W))
+  M := DontCare
+  block := DontCare
 
   // Ensures the FSM is initialized
   super.stateInit()
+
+  /** MD5 is byte ordered as big endian. This is a convince method to reorder
+    * _byte_ endianess of a bit stream. Bits don't care about endianess but this
+    * MD5 implementation does (for better or worse)
+    */
+  def swapByteEndianess(src: UInt, wireBuffer: Vec[UInt], wordSize: Int) = {
+    for (i <- 0 until wordSize / 8) {
+      wireBuffer(i) := src(8 * (i + 1) - 1, 8 * i)
+    }
+  }
 
   /** Apply padding if necessary */
   override def pad(): Unit = {
@@ -53,28 +64,41 @@ class Md5(p: MessageDigestParams, messageLength: Int)
     //  Append "1" to end of message
     val onePad = Cat(io.in.bits.message((messageLength) - 1, 0), 1.U)
     //  Pad 0 until 448 bit
-    val fill = 448 - (messageLength - 1)
+    val fill = 448 - (messageLength % 512) - 1
     val padded = Cat(onePad, Fill(fill, 0.U))
-    //  Append length of message as 64b to round out 512b
-    block := Cat(padded, messageLength.U(64.W))
+    //  Append length of message as 64b to round out 512b in little endian!
+    val lenAsBits = Wire(Vec(64 / 8, UInt(8.W)))
+    swapByteEndianess(messageLength.asUInt, lenAsBits, 64)
+    val done = Cat(padded, lenAsBits.reduceLeft((a, b) => Cat(a, b)))
+    // Reverse
+    block := Reverse(done)
   }
 
   override def chunk(): Unit = {
     // TODO: Make this accept messages longer than 512b
     for (i <- 0 until 16) {
-      M(i) := block(32 * (i + 1) - 1, 32 * i)
+      val littleEndianLine = block(32 * (i + 1) - 1, 32 * i)
+      val temp = Wire(ByteWire())
+      // for MD5 implementation, convert everything to big endian
+      swapByteEndianess(littleEndianLine, temp, 32)
+      // Reverse the order so we can index the block from 0 -> 16
+      M(i) := Reverse(temp.reduceLeft((a, b) => Cat(a, b)))
     }
   }
 
   /** Main hashing logic */
   override def hash(): Unit = {
-    val f = Wire(UInt(32.W))
-    val g = Wire(UInt(32.W))
+    val f = Wire(UInt(p.wordSize.W))
+    val g = Wire(UInt(p.wordSize.W))
     val notB = ~b
     val notD = ~d
     val i = wordIndex
+//    printf(cf"$i: A: $a\n")
+//    printf(cf"$i: B: $b\n")
+//    printf(cf"$i: C: $c\n")
+//    printf(cf"$i: D: $d\n-------\n")
     when(i < 16.U) {
-      f := ((b & c) | (notB.asUInt & d))
+      f := (b & c) | (notB.asUInt & d)
       g := i
     }.elsewhen(i < 32.U) {
       f := ((d & b) | (notD.asUInt & c))
@@ -86,23 +110,28 @@ class Md5(p: MessageDigestParams, messageLength: Int)
       f := c ^ (b | notD.asUInt)
       g := (7.U * i) % 16.U
     }
-    val temp = b +& (a +& f +& M(g).asUInt +& T(i).asUInt).rotateLeft(S(i))
+    val temp = f + a + T(i).asUInt + M(g).asUInt
     a := d
     d := c
     c := b
-    b := temp
+    b := b + temp.rotateLeft(S(i))
 
     when(wordWrap) {
-      a0 := a0 +& a
-      b0 := b0 +& b
-      c0 := c0 +& c
-      d0 := d0 +& d
+      a0 := a0 + a
+      b0 := b0 + b
+      c0 := c0 + c
+      d0 := d0 + d
     }
   }
 
-//  /** Wire hash state to output */
+  /** Wire hash state to output */
   override def output(): Unit = {
     // Concatenate the four state variables to produce the final hash
-    io.out.bits := Cat(a0, b0, c0, d0)
+    val reordered = Seq(a0, b0, c0, d0).map { e =>
+      val temp = Wire(ByteWire())
+      swapByteEndianess(e, temp, 32)
+      temp.reduceLeft((a, b) => Cat(a, b)).asUInt
+    }
+    io.out.bits := reordered.reduceLeft((a, b) => Cat(a, b)).asUInt
   }
 }
