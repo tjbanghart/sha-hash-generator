@@ -5,21 +5,26 @@ package sha
 import chisel3._
 import chisel3.util._
 
-/**
- * Compute MD5 hash given 512b input message.
- *
- * Reference: https://en.wikipedia.org/wiki/MD5#Algorithm
- */
-class Md5(p: MessageDigestParams, messageLength: Int) extends MessageDigest(p, messageLength) with MessageDigestTraits {
+/** Compute MD5 hash given 512b input message.
+  *
+  * Reference: https://en.wikipedia.org/wiki/MD5#Algorithm
+  */
+class Md5(p: MessageDigestParams, messageLength: Int)
+    extends MessageDigest(p, messageLength)
+    with MessageDigestTraits {
   io.out.bits := DontCare
   // T represents integer part of the sines of integers (Radians) as constants:
-  val T = VecInit.tabulate(63)(i => math.floor(4294967296L * math.abs(math.sin(i + 1))).toLong.U)
+  val T = VecInit.tabulate(63)(i =>
+    math.floor(4294967296L * math.abs(math.sin(i + 1))).toLong.U
+  )
 
   // S specifies the per-round shift amounts
-  val S = VecInit(Seq(7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
-    5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,
-    4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
-    6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21).map(_.asUInt))
+  val S = VecInit(
+    Seq(7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14,
+      20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16,
+      23, 4, 11, 16, 23, 4, 11, 16, 23, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15,
+      21, 6, 10, 15, 21).map(_.asUInt)
+  )
 
   // Define the base state variables
   val a0 = RegInit("h67452301".U(32.W))

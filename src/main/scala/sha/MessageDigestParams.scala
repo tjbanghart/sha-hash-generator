@@ -15,11 +15,11 @@ class MessageDigestIO(p: MessageDigestParams) extends Bundle {
 }
 
 case class MessageDigestParams(
-  outputWidth: Int,
-  internalStateVariables: Int, // number of variables used during hash algorithm
-  blockSize: Int,
-  wordSize: Int = 32, // size in bits of word to operate on
-  rounds: Int,
+    outputWidth: Int,
+    internalStateVariables: Int, // number of variables used during hash algorithm
+    blockSize: Int,
+    wordSize: Int = 32, // size in bits of word to operate on
+    rounds: Int
 )
 
 object MessageDigestParamsEnum extends Enumeration {

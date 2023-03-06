@@ -2,19 +2,18 @@ package sha
 
 import chisel3._
 
-/**
- * Compute SHA-0 hash given 512b input message.
- *
- * Reference: https://en.wikipedia.org/wiki/SHA-1#SHA-1_pseudocode
- * SHA-1 and SHA-0 are mostly with the exception of an additional left rotation
- * during the `chunk` phase.
- */
+/** Compute SHA-0 hash given 512b input message.
+  *
+  * Reference: https://en.wikipedia.org/wiki/SHA-1#SHA-1_pseudocode SHA-1 and
+  * SHA-0 are mostly with the exception of an additional left rotation during
+  * the `chunk` phase.
+  */
 class Sha0(p: MessageDigestParams, length: Int) extends Md5(p, length) {
   // SHA-0 has an additional start state
   val e0 = RegInit("hc3d2e1f0".U(32.W))
   val e = RegInit("hc3d2e1f0".U(32.W))
   // SHA-0 extends the 512b block of 16 32b words to 80 32b words
-  override val M =  Wire(Vec(80, UInt(32.W)))
+  override val M = Wire(Vec(80, UInt(32.W)))
 
   def md5Chunk(): Unit = {
     super.chunk() // chunks 512b to 16 32b words
@@ -63,6 +62,6 @@ class Sha0(p: MessageDigestParams, length: Int) extends Md5(p, length) {
   }
 
   override def output(): Unit = {
-    io.out.bits := (a0 << 128).asUInt | (b0 << 96).asUInt| (c0 << 64).asUInt | (d0 << 32).asUInt | e0
+    io.out.bits := (a0 << 128).asUInt | (b0 << 96).asUInt | (c0 << 64).asUInt | (d0 << 32).asUInt | e0
   }
 }

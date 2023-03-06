@@ -1,3 +1,5 @@
+package sha
+
 // See README.md for license details.
 
 package sha
@@ -5,10 +7,10 @@ package sha
 import chisel3._
 import chiseltest._
 import org.scalatest.freespec.AnyFreeSpec
-import sha.CommonTest._
+import CommonTest._
 
-class MD5Test extends AnyFreeSpec with ChiselScalatestTester {
-  "compute the correct hash value for a simple message" in {
+class FSMTester extends AnyFreeSpec with ChiselScalatestTester {
+  "state changes align with the basic parameters" in {
     val len = messageBitLength(BASE_TEST_STRING)
     val params = MessageDigestParamsEnum.MD5
     test(new Md5(params, messageBitLength(BASE_TEST_STRING))) { c =>

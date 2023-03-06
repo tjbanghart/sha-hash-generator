@@ -2,10 +2,10 @@ package sha
 
 import chisel3._
 
-/**
- * Contract of a Message Digest algorithm.
- */
+/** Contract of a Message Digest algorithm.
+  */
 trait MessageDigestTraits extends Module {
+
   /** Apply padding if necessary */
   def pad(): Unit
 
