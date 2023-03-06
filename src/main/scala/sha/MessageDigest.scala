@@ -8,9 +8,9 @@ object State {
   val sIdle :: sLoad :: sHash :: sOutput :: Nil = Enum(4)
 }
 
-/** Base class for MessageDigest classes
+/** Base for MessageDigest classes
   *
-  * Contains base FSM and counters for hashing rounds based on provided {@link
+  * Contains FSM and counters for hashing rounds based on provided {@link
   * MessageDigestParams}
   */
 abstract class MessageDigest(p: MessageDigestParams, messageLength: Int)
@@ -20,7 +20,8 @@ abstract class MessageDigest(p: MessageDigestParams, messageLength: Int)
   val state = RegInit(State.sIdle)
 
   val (wordIndex, wordWrap) = Counter(state === State.sHash, p.rounds)
-  val (chunkIndex, chunkWrap) = Counter(wordWrap, (p.blockSize / messageLength))
+  val (chunkIndex, chunkWrap) =
+    Counter(state === State.sLoad || wordWrap, messageLength / p.blockSize)
 
   io.in.ready := state === State.sIdle
   io.out.valid := state === State.sIdle | state === State.sOutput
@@ -36,9 +37,12 @@ abstract class MessageDigest(p: MessageDigestParams, messageLength: Int)
         }
       }
       is(State.sLoad) {
+        // TODO: Handle multiple cycles of load
         pad()
         chunk()
-        state := State.sHash
+        when(chunkWrap) {
+          state := State.sHash
+        }
       }
       is(State.sHash) {
         hash()

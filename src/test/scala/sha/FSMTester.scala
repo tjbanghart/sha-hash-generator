@@ -7,27 +7,63 @@ package sha
 import chisel3._
 import chiseltest._
 import org.scalatest.freespec.AnyFreeSpec
-import CommonTest._
 
+/** Stubbed {@link MessageDigest} class to test state */
+class MessageDigestStateTest(p: MessageDigestParams, messageLength: Int)
+    extends MessageDigest(p, messageLength) {
+  val currentState = IO(new Bundle {
+    val s = Output(UInt(32.W))
+    val countWord = Output(UInt(p.wordSize.W))
+    val countChunk = Output(UInt(p.wordSize.W))
+  })
+  currentState.s := state
+  currentState.countWord := wordIndex
+  currentState.countChunk := chunkIndex
+
+  io.out.bits := DontCare
+
+  // Make sure we get the state management we care about
+  super.stateInit()
+
+  /** Apply padding if necessary */
+  override def pad(): Unit = {}
+
+  /** Chunk data */
+  override def chunk(): Unit = {}
+
+  /** Main hashing logic */
+  override def hash(): Unit = {}
+
+  /** Wire hash state to output */
+  override def output(): Unit = {}
+}
+
+/** Tests the state for message digest algorithms */
 class FSMTester extends AnyFreeSpec with ChiselScalatestTester {
   "state changes align with the basic parameters" in {
-    val len = messageBitLength(BASE_TEST_STRING)
+    val len = 1024
     val params = MessageDigestParamsEnum.MD5
-    test(new Md5(params, messageBitLength(BASE_TEST_STRING))) { c =>
-      val expected =
-        byteArrayToString(JAVA_MD5.digest(BASE_TEST_STRING.getBytes("ASCII")))
-      c.io.in.bits.message.poke(stringToHex(BASE_TEST_STRING).U(512.W))
+    test(new MessageDigestStateTest(params, len)) { c =>
+      c.currentState.s.expect(State.sIdle)
       c.io.in.valid.poke(true)
+      c.clock.step(1)
+      c.io.in.valid.poke(false)
+      c.currentState.s.expect(State.sLoad)
       // Allow load cycle to complete
-      c.clock.step((params.blockSize / len) + 1)
+      c.clock.step(len / params.blockSize)
+      c.currentState.s.expect(State.sHash)
       c.io.in.valid.poke(false.B)
       c.io.in.ready.expect(false.B)
       c.io.out.valid.expect(false.B)
-      // The simple test case is less than 512b so it should be completed
-      // after a single cycle of rounds.
-      c.clock.step(params.rounds)
+      for (i <- 0 until len / params.blockSize) {
+        c.currentState.countChunk.expect(i)
+        for (j <- 0 until params.rounds) {
+          c.currentState.countWord.expect(j)
+          c.clock.step(1)
+        }
+      }
+      c.currentState.s.expect(State.sOutput)
       c.io.out.valid.expect(true.B)
-      c.io.out.bits.expect(expected.U(128.W)) // Expected hash value in hex
     }
   }
 }

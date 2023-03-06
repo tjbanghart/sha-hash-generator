@@ -38,10 +38,10 @@ class Md5(p: MessageDigestParams, messageLength: Int)
   val c = RegInit("h98badcfe".U(32.W))
   val d = RegInit("h10325476".U(32.W))
 
-  val M = Wire(Vec(16, UInt(32.W)))
-  val block = Wire(UInt(p.blockSize.W))
-  M := DontCare
-  block := DontCare
+  val M = Reg(Vec(16, UInt(32.W)))
+  val block = Reg(UInt(p.blockSize.W))
+//  M := DontCare
+//  block := DontCare
 
   // Ensures the FSM is initialized
   super.stateInit()

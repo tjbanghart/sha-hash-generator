@@ -5,7 +5,7 @@ package sha
 import chisel3._
 import chiseltest._
 import org.scalatest.freespec.AnyFreeSpec
-import sha.CommonTest._
+import CommonTest._
 
 class MD5Test extends AnyFreeSpec with ChiselScalatestTester {
   "compute the correct hash value for a simple message" in {
