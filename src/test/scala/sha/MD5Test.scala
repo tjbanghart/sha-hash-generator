@@ -33,10 +33,12 @@ class MD5Test extends AnyFreeSpec with ChiselScalatestTester {
   "compute the correct hash value for a simple message" in {
     val len = messageBitLength(BASE_TEST_STRING)
     val params = MessageDigestParamsEnum.MD5
-    test(new Md5(params, messageBitLength(BASE_TEST_STRING))) { c =>
+    test(new Md5(params, messageBitLength(BASE_TEST_STRING))).withAnnotations(Seq(WriteVcdAnnotation)) { c =>
       val expected =
         byteArrayToString(JAVA_MD5.digest(BASE_TEST_STRING.getBytes("ASCII")))
       c.io.in.bits.message.poke(stringToHex(BASE_TEST_STRING).U(512.W))
+      val originalInBytes = stringToHex(BASE_TEST_STRING)
+      c.io.in.bits.message.expect(originalInBytes.U)
       c.io.in.valid.poke(true)
       // Allow load cycle to complete
       c.clock.step((params.blockSize / len) + 1)
