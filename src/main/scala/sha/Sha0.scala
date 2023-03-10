@@ -1,5 +1,6 @@
 package sha
 
+import Chisel.Cat
 import chisel3._
 
 /** Compute SHA-0 hash given 512b input message.
@@ -13,7 +14,7 @@ class Sha0(p: MessageDigestParams, length: Int) extends Md5(p, length) {
   val e0 = RegInit("hc3d2e1f0".U(32.W))
   val e = RegInit("hc3d2e1f0".U(32.W))
   // SHA-0 extends the 512b block of 16 32b words to 80 32b words
-  override val M = Wire(Vec(80, UInt(32.W)))
+  override lazy val M = Wire(Vec(80, UInt(32.W)))
 
   def md5Chunk(): Unit = {
     super.chunk() // chunks 512b to 16 32b words
@@ -23,7 +24,7 @@ class Sha0(p: MessageDigestParams, length: Int) extends Md5(p, length) {
     md5Chunk()
     for (i <- 16 until p.rounds) {
       // extend the chunk using xor of existing chunks
-      M(i) := M(i - 3) ^ M(i - 8) ^ M(i - 14) ^ M(1 - 16)
+      M(i) := M(i - 3) ^ M(i - 8) ^ M(i - 14) ^ M(i - 16)
     }
   }
 
@@ -32,6 +33,11 @@ class Sha0(p: MessageDigestParams, length: Int) extends Md5(p, length) {
     val k = Wire(UInt(32.W))
     val notB = ~b
     val i = wordIndex
+    printf(cf"$i: A: $a%x\n")
+    printf(cf"$i: B: $b%x\n")
+    printf(cf"$i: C: $c%x\n")
+    printf(cf"$i: D: $d%x\n-------\n")
+    printf(cf"$i: E: $e%x\n-------\n")
     when(i < 20.U) {
       f := ((b & c) ^ (notB.asUInt & d))
       k := "h5A827999".U
@@ -62,6 +68,11 @@ class Sha0(p: MessageDigestParams, length: Int) extends Md5(p, length) {
   }
 
   override def output(): Unit = {
+    val reordered = Seq(a0, b0, c0, d0, e0).map { e =>
+      val temp = Wire(ByteWire())
+      swapByteEndianess(e, temp, 32)
+      temp.reduceLeft((a, b) => Cat(a, b)).asUInt
+    }
     io.out.bits := (a0 << 128).asUInt | (b0 << 96).asUInt | (c0 << 64).asUInt | (d0 << 32).asUInt | e0
   }
 }

@@ -30,10 +30,16 @@ object MessageDigestParamsEnum extends Enumeration {
     blockSize = 512,
     rounds = 64
   )
-  val SHA_0 = MessageDigestParams(
+  val SHA_1 = MessageDigestParams(
     outputWidth = 160,
     internalStateVariables = 5,
     blockSize = 512,
     rounds = 80
+  )
+  val SHA_256 = MessageDigestParams(
+    outputWidth = 256,
+    internalStateVariables = 8,
+    blockSize = 512,
+    rounds = 64
   )
 }

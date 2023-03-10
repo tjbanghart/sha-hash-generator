@@ -5,6 +5,14 @@ package sha
 import chisel3._
 import chisel3.util._
 
+object Md5 {
+  def apply(p: MessageDigestParams, messageLength: Int): Md5 = {
+    val md5 = new Md5(p, messageLength)
+    md5.stateInit()
+    md5
+  }
+}
+
 /** Compute MD5 hash given 512b input message.
   *
   * Reference: https://en.wikipedia.org/wiki/MD5#Algorithm
@@ -39,17 +47,14 @@ class Md5(p: MessageDigestParams, messageLength: Int)
   val c = RegInit("h98badcfe".U(32.W))
   val d = RegInit("h10325476".U(32.W))
 
-  val M = Wire(Vec(16, UInt(32.W)))
-  val block = Wire(UInt(p.blockSize.W))
+  lazy val M = Wire(Vec(16, UInt(32.W)))
+  lazy val block = Wire(UInt(p.blockSize.W))
   M := DontCare
   block := DontCare
 
-  // Ensures the FSM is initialized
-  super.stateInit()
-
-  /** MD5 is byte ordered as big endian. This is a convince method to reorder
-    * _byte_ endianess of a bit stream. Bits don't care about endianess but this
-    * MD5 implementation does (for better or worse)
+  /** This is a convince method to reorder _byte_ endianess of a bit stream.
+    * Bits don't care about endianess but this MD5 implementation does (for
+    * better or worse)
     */
   def swapByteEndianess(src: UInt, wireBuffer: Vec[UInt], wordSize: Int) = {
     for (i <- 0 until wordSize / 8) {
@@ -59,7 +64,7 @@ class Md5(p: MessageDigestParams, messageLength: Int)
 
   /** Apply padding if necessary */
   override def pad(): Unit = {
-    // TODO: Make this accept messages longer than 512b
+    // TODO: Allow messages longer than 512b
     // Pad the input following the spec:
     //  Append "1" to end of message
     val onePad = Cat(io.in.bits.message((messageLength) - 1, 0), 1.U)
@@ -93,10 +98,6 @@ class Md5(p: MessageDigestParams, messageLength: Int)
     val notB = ~b
     val notD = ~d
     val i = wordIndex
-//    printf(cf"$i: A: $a\n")
-//    printf(cf"$i: B: $b\n")
-//    printf(cf"$i: C: $c\n")
-//    printf(cf"$i: D: $d\n-------\n")
     when(i < 16.U) {
       f := (b & c) | (notB.asUInt & d)
       g := i
