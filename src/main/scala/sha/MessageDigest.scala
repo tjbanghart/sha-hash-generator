@@ -1,8 +1,8 @@
 package sha
 
-import Chisel.{switch}
+import Chisel.switch
 import chisel3._
-import chisel3.util.{Counter, Enum, is}
+import chisel3.util.{Cat, Counter, Enum, Fill, Reverse, is}
 
 object State {
   val sIdle :: sLoad :: sHash :: sOutput :: Nil = Enum(4)
@@ -18,7 +18,6 @@ abstract class MessageDigest(p: MessageDigestParams, messageLength: Int)
     with MessageDigestTraits {
   val io = IO(new MessageDigestIO(p))
   val state = RegInit(State.sIdle)
-
   val (wordIndex, wordWrap) = Counter(state === State.sHash, p.rounds + 1)
   val (chunkIndex, chunkWrap) =
     Counter(state === State.sLoad || wordWrap, messageLength / p.blockSize + 1)

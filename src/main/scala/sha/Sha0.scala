@@ -1,7 +1,7 @@
 package sha
 
-import Chisel.Cat
 import chisel3._
+import chisel3.util._
 
 /** Compute SHA-0 hash given 512b input message.
   *
@@ -9,22 +9,35 @@ import chisel3._
   * SHA-0 are mostly with the exception of an additional left rotation during
   * the `chunk` phase.
   */
-class Sha0(p: MessageDigestParams, length: Int) extends Md5(p, length) {
+class Sha0(p: MessageDigestParams, messageLength: Int)
+    extends Md5(p, messageLength) {
   // SHA-0 has an additional start state
   val e0 = RegInit("hc3d2e1f0".U(32.W))
   val e = RegInit("hc3d2e1f0".U(32.W))
   // SHA-0 extends the 512b block of 16 32b words to 80 32b words
   override lazy val M = Wire(Vec(80, UInt(32.W)))
 
-  def md5Chunk(): Unit = {
-    super.chunk() // chunks 512b to 16 32b words
+  override def pad(): Unit = {
+    // TODO: Abstract this to base class
+    // Pad the input following the spec:
+    //  Append "1" to end of message
+    val onePad = Cat(io.in.bits.message((messageLength) - 1, 0), 1.U)
+    //  Pad 0 until 448 bit
+    val fill = 448 - (messageLength % 512) - 1
+    val padded = Cat(onePad, Fill(fill, 0.U))
+    //  Append length of message as 64b to round out 512b in little endian!
+    val done = Cat(padded, messageLength.U(64.W))
+    block := Reverse(done)
   }
 
   override def chunk(): Unit = {
-    md5Chunk()
+    for (i <- 0 until 16) {
+      val littleEndianLine = block(32 * (i + 1) - 1, 32 * i)
+      M(i) := Reverse(littleEndianLine)
+    }
     for (i <- 16 until p.rounds) {
       // extend the chunk using xor of existing chunks
-      M(i) := M(i - 3) ^ M(i - 8) ^ M(i - 14) ^ M(i - 16)
+      M(i) := (M(i - 3) ^ M(i - 8) ^ M(i - 14) ^ M(i - 16))
     }
   }
 
@@ -33,11 +46,6 @@ class Sha0(p: MessageDigestParams, length: Int) extends Md5(p, length) {
     val k = Wire(UInt(32.W))
     val notB = ~b
     val i = wordIndex
-    printf(cf"$i: A: $a%x\n")
-    printf(cf"$i: B: $b%x\n")
-    printf(cf"$i: C: $c%x\n")
-    printf(cf"$i: D: $d%x\n-------\n")
-    printf(cf"$i: E: $e%x\n-------\n")
     when(i < 20.U) {
       f := ((b & c) ^ (notB.asUInt & d))
       k := "h5A827999".U
@@ -49,7 +57,7 @@ class Sha0(p: MessageDigestParams, length: Int) extends Md5(p, length) {
       k := "h8F1BBCDC".U
     }.otherwise {
       f := b ^ c ^ d
-      k := (7.U * i) % 16.U
+      k := "hCA62C1D6".U
     }
     val temp = a.rotateLeft(5.U) + f + e + k + M(i)
     e := d

@@ -15,8 +15,7 @@ object Sha256 {
   *
   * Reference: https://en.wikipedia.org/wiki/SHA-2
   */
-class Sha256(p: MessageDigestParams, length: Int)
-    extends Md5(p, length) {
+class Sha256(p: MessageDigestParams, length: Int) extends Md5(p, length) {
   // Internal state registers
   override val a0 = RegInit("h6a09e667".U(32.W))
   override val b0 = RegInit("hbb67ae85".U(32.W))
@@ -39,14 +38,70 @@ class Sha256(p: MessageDigestParams, length: Int)
 
   val K = VecInit(
     Seq(
-      "h428a2f98", "h71374491", "hb5c0fbcf", "he9b5dba5", "h3956c25b", "h59f111f1", "h923f82a4", "hab1c5ed5",
-      "hd807aa98", "h12835b01", "h243185be", "h550c7dc3", "h72be5d74", "h80deb1fe", "h9bdc06a7", "hc19bf174",
-      "he49b69c1", "hefbe4786", "h0fc19dc6", "h240ca1cc", "h2de92c6f", "h4a7484aa", "h5cb0a9dc", "h76f988da",
-      "h983e5152", "ha831c66d", "hb00327c8", "hbf597fc7", "hc6e00bf3", "hd5a79147", "h06ca6351", "h14292967",
-      "h27b70a85", "h2e1b2138", "h4d2c6dfc", "h53380d13", "h650a7354", "h766a0abb", "h81c2c92e", "h92722c85",
-      "ha2bfe8a1", "ha81a664b", "hc24b8b70", "hc76c51a3", "hd192e819", "hd6990624", "hf40e3585", "h106aa070",
-      "h19a4c116", "h1e376c08", "h2748774c", "h34b0bcb5", "h391c0cb3", "h4ed8aa4a", "h5b9cca4f", "h682e6ff3",
-      "h748f82ee", "h78a5636f", "h84c87814", "h8cc70208", "h90befffa", "ha4506ceb", "hbef9a3f7", "hc67178f2"
+      "h428a2f98",
+      "h71374491",
+      "hb5c0fbcf",
+      "he9b5dba5",
+      "h3956c25b",
+      "h59f111f1",
+      "h923f82a4",
+      "hab1c5ed5",
+      "hd807aa98",
+      "h12835b01",
+      "h243185be",
+      "h550c7dc3",
+      "h72be5d74",
+      "h80deb1fe",
+      "h9bdc06a7",
+      "hc19bf174",
+      "he49b69c1",
+      "hefbe4786",
+      "h0fc19dc6",
+      "h240ca1cc",
+      "h2de92c6f",
+      "h4a7484aa",
+      "h5cb0a9dc",
+      "h76f988da",
+      "h983e5152",
+      "ha831c66d",
+      "hb00327c8",
+      "hbf597fc7",
+      "hc6e00bf3",
+      "hd5a79147",
+      "h06ca6351",
+      "h14292967",
+      "h27b70a85",
+      "h2e1b2138",
+      "h4d2c6dfc",
+      "h53380d13",
+      "h650a7354",
+      "h766a0abb",
+      "h81c2c92e",
+      "h92722c85",
+      "ha2bfe8a1",
+      "ha81a664b",
+      "hc24b8b70",
+      "hc76c51a3",
+      "hd192e819",
+      "hd6990624",
+      "hf40e3585",
+      "h106aa070",
+      "h19a4c116",
+      "h1e376c08",
+      "h2748774c",
+      "h34b0bcb5",
+      "h391c0cb3",
+      "h4ed8aa4a",
+      "h5b9cca4f",
+      "h682e6ff3",
+      "h748f82ee",
+      "h78a5636f",
+      "h84c87814",
+      "h8cc70208",
+      "h90befffa",
+      "ha4506ceb",
+      "hbef9a3f7",
+      "hc67178f2"
     ).map(_.asUInt)
   )
 
@@ -63,9 +118,11 @@ class Sha256(p: MessageDigestParams, length: Int)
     md5Chunk()
     // Extend the first 16 words into the remaining 48 words w[16..63] of the message schedule array:
     for (i <- 16 until p.rounds) {
-      s0 := M(i - 15).rotateRight(7.U) ^ M(i - 15).rotateRight(18.U) ^ M(i - 15).rotateRight(3.U)
-      s1 := M(i - 2).rotateRight(17.U) ^M(i - 2).rotateRight(19.U) ^ M(i - 2).rotateRight(10.U)
-      M(i) := M(i - 16)  + s0 +  M(i - 7) + s1
+      s0 := M(i - 15).rotateRight(7.U) ^ M(i - 15).rotateRight(18.U) ^ M(i - 15)
+        .rotateRight(3.U)
+      s1 := M(i - 2).rotateRight(17.U) ^ M(i - 2).rotateRight(19.U) ^ M(i - 2)
+        .rotateRight(10.U)
+      M(i) := M(i - 16) + s0 + M(i - 7) + s1
     }
   }
 
@@ -84,7 +141,7 @@ class Sha256(p: MessageDigestParams, length: Int)
     ch := (e & f) ^ (notE.asUInt & g)
     temp1 := h + S1 + ch + K(i) + M(i)
     S0 := a.rotateRight(2.U) ^ a.rotateRight(13.U) ^ a.rotateRight(22.U)
-    maj := (a & b) ^ (a & c)  (b & c)
+    maj := (a & b) ^ (a & c)(b & c)
     temp2 := S0 + maj
 
     h := g
