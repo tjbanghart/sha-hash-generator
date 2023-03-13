@@ -25,8 +25,44 @@ abstract class MessageDigest(p: MessageDigestParams, messageLength: Int)
   io.in.ready := state === State.sIdle
   io.out.valid := state === State.sIdle | state === State.sOutput
 
+  /** The `block` on which the hash algorithm is performed. */
+  lazy val block = Wire(UInt(p.blockSize.W))
+
+  /** The `block` after it has been chunked. */
+  lazy val M = Wire(Vec(p.rounds, UInt(p.wordSize.W)))
+
+  /** Standard Message Digest pad. This is its own method so it can be called by
+    * extended classes without an overridden def interfering.
+    *
+    * Specifically, MD5 cares about the byte endianness of the message while SHA
+    * algorithms don't. SHA inherits from MD5 but calls this for padding.
+    */
+  def doDefaultPad(): Unit = {
+    // Pad the input following the spec:
+    //  Append "1" to end of message
+    val onePad = Cat(io.in.bits.message((messageLength) - 1, 0), 1.U)
+    //  Pad 0 until 448 bit
+    val fill = 448 - (messageLength % 512) - 1
+    val padded = Cat(onePad, Fill(fill, 0.U))
+    //  Append length of message as 64b to round out 512b in little endian!
+    val done = Cat(padded, messageLength.U(64.W))
+    block := Reverse(done)
+  }
+
+  /** Standard Message Digest chunk. This is its own method so it can be called
+    * by extended classes without an overridden def interfering.
+    *
+    * Call this method to take care of processing the first 16 words of a chunk.
+    */
+  def doDefaultChunk(): Unit = {
+    for (i <- 0 until 16) {
+      val littleEndianLine = block(32 * (i + 1) - 1, 32 * i)
+      M(i) := Reverse(littleEndianLine)
+    }
+  }
+
   /** Declares the FSM for the hash implementation. Extending classes must call
-    * this method during initialization
+    * this method after initialization.
     */
   def stateInit() = {
     switch(state) {

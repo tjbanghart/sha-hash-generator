@@ -17,9 +17,9 @@ class MessageDigestIO(p: MessageDigestParams) extends Bundle {
 case class MessageDigestParams(
     outputWidth: Int,
     internalStateVariables: Int, // number of variables used during hash algorithm
-    blockSize: Int,
+    blockSize: Int, // size of the hash 'line' the algorithm operates on
     wordSize: Int = 32, // size in bits of word to operate on
-    rounds: Int
+    rounds: Int // number of rounds in the main hash algorithm
 )
 
 object MessageDigestParamsEnum extends Enumeration {
@@ -38,6 +38,12 @@ object MessageDigestParamsEnum extends Enumeration {
   )
   val SHA_256 = MessageDigestParams(
     outputWidth = 256,
+    internalStateVariables = 8,
+    blockSize = 512,
+    rounds = 64
+  )
+  val SHA_224 = MessageDigestParams(
+    outputWidth = 224,
     internalStateVariables = 8,
     blockSize = 512,
     rounds = 64

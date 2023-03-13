@@ -11,6 +11,7 @@ object CommonTest {
   val JAVA_MD5 = JavaMessageDigest.getInstance("MD5")
   val JAVA_SHA_1 = JavaMessageDigest.getInstance("SHA-1")
   val JAVA_SHA_256 = JavaMessageDigest.getInstance("SHA-256")
+  val JAVA_SHA_224 = JavaMessageDigest.getInstance("SHA-224")
 
   def messageBitLength(str: String): Int = {
     str.getBytes.length * 8

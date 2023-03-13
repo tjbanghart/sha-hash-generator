@@ -12,38 +12,30 @@ import chisel3.util._
 class Sha0(p: MessageDigestParams, messageLength: Int)
     extends Md5(p, messageLength) {
   // SHA-0 has an additional start state
-  val e0 = RegInit("hc3d2e1f0".U(32.W))
-  val e = RegInit("hc3d2e1f0".U(32.W))
-  // SHA-0 extends the 512b block of 16 32b words to 80 32b words
-  override lazy val M = Wire(Vec(80, UInt(32.W)))
+  val e0 = RegInit("hc3d2e1f0".U(p.wordSize.W))
+  val e = RegInit(0.U(p.wordSize.W))
+  // since we added a new register make sure the list is updated
+  override val internalStateReg = Seq(a0, b0, c0, d0, e0)
+  override val hashStateReg = Seq(a, b, c, d, e)
 
   override def pad(): Unit = {
-    // TODO: Abstract this to base class
-    // Pad the input following the spec:
-    //  Append "1" to end of message
-    val onePad = Cat(io.in.bits.message((messageLength) - 1, 0), 1.U)
-    //  Pad 0 until 448 bit
-    val fill = 448 - (messageLength % 512) - 1
-    val padded = Cat(onePad, Fill(fill, 0.U))
-    //  Append length of message as 64b to round out 512b in little endian!
-    val done = Cat(padded, messageLength.U(64.W))
-    block := Reverse(done)
+    doDefaultPad()
   }
 
   override def chunk(): Unit = {
-    for (i <- 0 until 16) {
-      val littleEndianLine = block(32 * (i + 1) - 1, 32 * i)
-      M(i) := Reverse(littleEndianLine)
-    }
+    doDefaultChunk()
     for (i <- 16 until p.rounds) {
       // extend the chunk using xor of existing chunks
       M(i) := (M(i - 3) ^ M(i - 8) ^ M(i - 14) ^ M(i - 16))
     }
+    internalStateReg.zip(hashStateReg).map { case (internal, hash) =>
+      hash := internal
+    }
   }
 
   override def hash(): Unit = {
-    val f = Wire(UInt(32.W))
-    val k = Wire(UInt(32.W))
+    val f = Wire(UInt(p.wordSize.W))
+    val k = Wire(UInt(p.wordSize.W))
     val notB = ~b
     val i = wordIndex
     when(i < 20.U) {
@@ -76,11 +68,6 @@ class Sha0(p: MessageDigestParams, messageLength: Int)
   }
 
   override def output(): Unit = {
-    val reordered = Seq(a0, b0, c0, d0, e0).map { e =>
-      val temp = Wire(ByteWire())
-      swapByteEndianess(e, temp, 32)
-      temp.reduceLeft((a, b) => Cat(a, b)).asUInt
-    }
     io.out.bits := (a0 << 128).asUInt | (b0 << 96).asUInt | (c0 << 64).asUInt | (d0 << 32).asUInt | e0
   }
 }

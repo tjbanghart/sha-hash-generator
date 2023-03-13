@@ -36,19 +36,19 @@ class Md5(p: MessageDigestParams, messageLength: Int)
   )
 
   // Define the base state variables
-  val a0 = RegInit("h67452301".U(32.W))
-  val b0 = RegInit("hefcdab89".U(32.W))
-  val c0 = RegInit("h98badcfe".U(32.W))
-  val d0 = RegInit("h10325476".U(32.W))
+  val a0 = RegInit("h67452301".U(p.wordSize.W))
+  val b0 = RegInit("hefcdab89".U(p.wordSize.W))
+  val c0 = RegInit("h98badcfe".U(p.wordSize.W))
+  val d0 = RegInit("h10325476".U(p.wordSize.W))
+  val internalStateReg = Seq(a0, b0, c0, d0)
 
   // Define the internal state variables
-  val a = RegInit("h67452301".U(32.W))
-  val b = RegInit("hefcdab89".U(32.W))
-  val c = RegInit("h98badcfe".U(32.W))
-  val d = RegInit("h10325476".U(32.W))
+  val a = RegInit(0.U(p.wordSize.W))
+  val b = RegInit(0.U(p.wordSize.W))
+  val c = RegInit(0.U(p.wordSize.W))
+  val d = RegInit(0.U(p.wordSize.W))
+  val hashStateReg = Seq(a, b, c, d)
 
-  lazy val M = Wire(Vec(16, UInt(32.W)))
-  lazy val block = Wire(UInt(p.blockSize.W))
   M := DontCare
   block := DontCare
 
@@ -64,7 +64,6 @@ class Md5(p: MessageDigestParams, messageLength: Int)
 
   /** Apply padding if necessary */
   override def pad(): Unit = {
-    // TODO: Allow messages longer than 512b
     // Pad the input following the spec:
     //  Append "1" to end of message
     val onePad = Cat(io.in.bits.message((messageLength) - 1, 0), 1.U)
@@ -88,6 +87,9 @@ class Md5(p: MessageDigestParams, messageLength: Int)
       swapByteEndianess(littleEndianLine, temp, 32)
       // Reverse the order so we can index the block from 0 -> 16
       M(i) := Reverse(temp.reduceLeft((a, b) => Cat(a, b)))
+    }
+    internalStateReg.zip(hashStateReg).map { case (internal, hash) =>
+      hash := internal
     }
   }
 
