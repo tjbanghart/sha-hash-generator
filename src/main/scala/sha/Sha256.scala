@@ -1,6 +1,6 @@
 package sha
 
-import Chisel.Cat
+import chisel3.util._
 import chisel3._
 
 object Sha256 {
@@ -15,22 +15,24 @@ object Sha256 {
   *
   * Reference: https://en.wikipedia.org/wiki/SHA-2
   */
-class Sha256(p: MessageDigestParams, length: Int) extends Md5(p, length) {
+class Sha256(p: MessageDigestParams, messageLength: Int)
+  extends MessageDigest(p, messageLength)
+  with MessageDigestTraits {
   // Internal state registers
-  override val a0 = RegInit("h6a09e667".U(32.W))
-  override val b0 = RegInit("hbb67ae85".U(32.W))
-  override val c0 = RegInit("h3c6ef372".U(32.W))
-  override val d0 = RegInit("ha54ff53a".U(32.W))
+  val a0 = RegInit("h6a09e667".U(32.W))
+  val b0 = RegInit("hbb67ae85".U(32.W))
+  val c0 = RegInit("h3c6ef372".U(32.W))
+  val d0 = RegInit("ha54ff53a".U(32.W))
   val e0 = RegInit("h510e527f".U(32.W))
   val f0 = RegInit("h9b05688c".U(32.W))
   val g0 = RegInit("h1f83d9ab".U(32.W))
   val h0 = RegInit("h5be0cd19".U(32.W))
 
   // Hashing state registers
-  override val a = RegInit("h6a09e667".U(32.W))
-  override val b = RegInit("hbb67ae85".U(32.W))
-  override val c = RegInit("h3c6ef372".U(32.W))
-  override val d = RegInit("ha54ff53a".U(32.W))
+  val a = RegInit("h6a09e667".U(32.W))
+  val b = RegInit("hbb67ae85".U(32.W))
+  val c = RegInit("h3c6ef372".U(32.W))
+  val d = RegInit("ha54ff53a".U(32.W))
   val e = RegInit("h510e527f".U(32.W))
   val f = RegInit("h9b05688c".U(32.W))
   val g = RegInit("h1f83d9ab".U(32.W))
@@ -105,17 +107,35 @@ class Sha256(p: MessageDigestParams, length: Int) extends Md5(p, length) {
     ).map(_.asUInt)
   )
 
-  override lazy val M = Wire(Vec(64, UInt(32.W)))
+  lazy val M = Wire(Vec(64, UInt(32.W)))
+  lazy val block = Wire(UInt(p.blockSize.W))
+  M := DontCare
+  block := DontCare
+
+  def ByteWire(): Vec[UInt] = Vec(p.wordSize / 8, UInt(8.W))
+  io.out.bits := DontCare
 
   val s0 = Reg(UInt(32.W))
   val s1 = Reg(UInt(32.W))
 
-  def md5Chunk(): Unit = {
-    super.chunk() // chunks 512b to 16 32b words
+//  super.stateInit()
+
+  override def pad(): Unit = {
+    // TODO: Allow messages longer than 512b
+    // Pad the input following the spec:
+    //  Append "1" to end of message
+    val onePad = Cat(io.in.bits.message((messageLength) - 1, 0), 1.U)
+    //  Pad 0 until 448 bit
+    val fill = 448 - (messageLength % 512) - 1
+    val padded = Cat(onePad, Fill(fill, 0.U))
+    //  Append length of message as 64b to round out 512b
+    block := Cat(padded, messageLength.U(64.W))
   }
 
   override def chunk(): Unit = {
-    md5Chunk()
+    for (i <- 0 until 16) {
+      M(i) := block(32 * (i + 1) - 1, 32 * i)
+    }
     // Extend the first 16 words into the remaining 48 words w[16..63] of the message schedule array:
     for (i <- 16 until p.rounds) {
       s0 := M(i - 15).rotateRight(7.U) ^ M(i - 15).rotateRight(18.U) ^ M(i - 15)
