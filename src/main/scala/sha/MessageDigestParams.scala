@@ -8,8 +8,8 @@ class MessageDigestIO(p: MessageDigestParams) extends Bundle {
   val in = Flipped(Decoupled(new Bundle {
     // TODO: Read full message over multiple cycles
     // allow hashing on first chunk as soon as available
-    val message = UInt(512.W)
-    val messageLength = UInt(512.W)
+    val message = UInt(p.blockSize.W)
+    val messageLength = UInt(p.blockSize.W)
   }))
   val out = Valid(UInt(p.outputWidth.W))
 }
@@ -47,5 +47,12 @@ object MessageDigestParamsEnum extends Enumeration {
     internalStateVariables = 8,
     blockSize = 512,
     rounds = 64
+  )
+  val SHA_512 = MessageDigestParams(
+    outputWidth = 512,
+    internalStateVariables = 8,
+    blockSize = 1024,
+    wordSize = 64,
+    rounds = 80
   )
 }

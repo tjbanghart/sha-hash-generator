@@ -14,6 +14,7 @@ class Sha0(p: MessageDigestParams, messageLength: Int)
   // SHA-0 has an additional start state
   val e0 = RegInit("hc3d2e1f0".U(p.wordSize.W))
   val e = RegInit(0.U(p.wordSize.W))
+
   // since we added a new register make sure the list is updated
   override val internalStateReg = Seq(a0, b0, c0, d0, e0)
   override val hashStateReg = Seq(a, b, c, d, e)
@@ -28,9 +29,9 @@ class Sha0(p: MessageDigestParams, messageLength: Int)
       // extend the chunk using xor of existing chunks
       M(i) := (M(i - 3) ^ M(i - 8) ^ M(i - 14) ^ M(i - 16))
     }
-    internalStateReg.zip(hashStateReg).map { case (internal, hash) =>
-      hash := internal
-    }
+    internalStateReg
+      .zip(hashStateReg)
+      .foreach { case (internal, hash) => hash := internal }
   }
 
   override def hash(): Unit = {

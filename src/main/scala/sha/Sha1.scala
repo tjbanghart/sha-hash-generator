@@ -2,8 +2,8 @@ package sha
 
 import chisel3._
 object Sha1 {
-  def apply(p: MessageDigestParams, length: Int): Sha1 = {
-    val sha1 = new Sha1(p, length)
+  def apply(length: Int): Sha1 = {
+    val sha1 = new Sha1(MessageDigestParamsEnum.SHA_1, length)
     sha1.stateInit()
     sha1
   }

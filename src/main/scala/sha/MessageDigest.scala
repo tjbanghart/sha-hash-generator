@@ -1,6 +1,6 @@
 package sha
 
-import Chisel.switch
+import Chisel.{log2Ceil, switch}
 import chisel3._
 import chisel3.util.{Cat, Counter, Enum, Fill, Reverse, is}
 
@@ -13,7 +13,7 @@ object State {
   * Contains FSM and counters for hashing rounds based on provided {@link
   * MessageDigestParams}
   */
-abstract class MessageDigest(p: MessageDigestParams, messageLength: Int)
+abstract class MessageDigest(val p: MessageDigestParams, val messageLength: Int)
     extends Module
     with MessageDigestTraits {
   val io = IO(new MessageDigestIO(p))
@@ -34,18 +34,20 @@ abstract class MessageDigest(p: MessageDigestParams, messageLength: Int)
   /** Standard Message Digest pad. This is its own method so it can be called by
     * extended classes without an overridden def interfering.
     *
-    * Specifically, MD5 cares about the byte endianness of the message while SHA
+    * Specifically, MD5 cares about the endianness of the message while SHA
     * algorithms don't. SHA inherits from MD5 but calls this for padding.
     */
   def doDefaultPad(): Unit = {
     // Pad the input following the spec:
+    val lenBits = p.wordSize * 2
     //  Append "1" to end of message
     val onePad = Cat(io.in.bits.message((messageLength) - 1, 0), 1.U)
-    //  Pad 0 until 448 bit
-    val fill = 448 - (messageLength % 512) - 1
+    //  Pad 0 until the message length is appended
+    val fill = (p.blockSize - lenBits) - (messageLength % p.blockSize) - 1
     val padded = Cat(onePad, Fill(fill, 0.U))
-    //  Append length of message as 64b to round out 512b in little endian!
-    val done = Cat(padded, messageLength.U(64.W))
+    //  Append length of message depending on the lenBits
+    val done = Cat(padded, messageLength.U(lenBits.W))
+    // Reverse here is to make indexing into the chunk way easier
     block := Reverse(done)
   }
 
@@ -56,8 +58,9 @@ abstract class MessageDigest(p: MessageDigestParams, messageLength: Int)
     */
   def doDefaultChunk(): Unit = {
     for (i <- 0 until 16) {
-      val littleEndianLine = block(32 * (i + 1) - 1, 32 * i)
-      M(i) := Reverse(littleEndianLine)
+      val word = block(p.wordSize * (i + 1) - 1, p.wordSize * i)
+      // undo the reverse we made for easy indexing
+      M(i) := Reverse(word)
     }
   }
 

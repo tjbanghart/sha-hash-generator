@@ -9,9 +9,8 @@ import CommonTest._
 class Sha1Test extends AnyFreeSpec with ChiselScalatestTester {
   def runSimpleSha1Test(str: String) = {
     val len = messageBitLength(str)
-    val params = MessageDigestParamsEnum.SHA_1
-    test(Sha1(params, len)) { c =>
-      runSimpleHashTest(c, params, JAVA_SHA_1, str, len)
+    test(Sha1(len)) { c =>
+      runSimpleHashTest(c, JAVA_SHA_1, str)
     }
     assert(true)
   }
