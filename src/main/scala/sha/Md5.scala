@@ -13,7 +13,7 @@ object Md5 {
   }
 }
 
-/** Compute MD5 hash given 512b input message.
+/** Compute a MD5 hash.
   *
   * Reference: https://en.wikipedia.org/wiki/MD5#Algorithm
   */
@@ -49,7 +49,7 @@ class Md5(p: MessageDigestParams, messageLength: Int)
   block := DontCare
   io.out.bits := DontCare
 
-  /** This is a convince method to reorder _byte_ endianess of a bit stream. */
+  /** This is a convenience method to reorder _byte_ endianess of a bit stream. */
   def swapByteEndianess(src: UInt, wireBuffer: Vec[UInt], wordSize: Int) = {
     for (i <- 0 until wordSize / byte) {
       wireBuffer(i) := src(byte * (i + 1) - 1, byte * i)
