@@ -6,8 +6,7 @@ This is a series of [Chisel](chisel-lang.org/) modules capable of generating har
 - Jessica Dagostini <jimlauda@ucsc.edu>
 - TJ Banghart <tbanghar@ucsc.edu>
 
-### This is a WIP
-Currently the following are supported:
+The following are supported:
 - [MD5](https://en.wikipedia.org/wiki/MD5)
 - [SHA-0](https://en.wikipedia.org/wiki/SHA-1#Development)
 - [SHA-1](https://en.wikipedia.org/wiki/SHA-1)
